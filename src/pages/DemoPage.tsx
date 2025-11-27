@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -8,7 +8,7 @@ import { Toaster, toast } from '@/components/ui/sonner'
 import type { User, Chat, ChatMessage } from '@shared/types'
 import { api } from '@/lib/api-client'
 import { AppLayout } from '@/components/layout/AppLayout'
-
+import { Link } from 'react-router-dom'
 export function DemoPage() {
   // Minimal state — small demo for AI to extend
   const [users, updateUsers] = useState<User[]>([])
@@ -19,9 +19,7 @@ export function DemoPage() {
   const [name, updateName] = useState('')
   const [title, updateTitle] = useState('')
   const [text, updateText] = useState('')
-
   const usersById = useMemo(() => new Map(users.map(u => [u.id, u])), [users])
-
   const loadBasics = useCallback(async () => {
     const [uPage, cPage] = await Promise.all([
       api<{ items: User[]; next: string | null }>('/api/users'),
@@ -30,29 +28,23 @@ export function DemoPage() {
     updateUsers(uPage.items)
     updateChats(cPage.items)
   }, [])
-
   const loadMessages = useCallback(async (chatId: string) => {
     const m = await api<ChatMessage[]>(`/api/chats/${chatId}/messages`)
     updateMessages(m)
   }, [])
-
   useEffect(() => {
     loadBasics().catch(err => toast.error(err.message))
   }, [loadBasics])
-
   // Select first user/chat once data arrives
   useEffect(() => {
     if (!selectedUserId && users.length) chooseUserId(users[0].id)
   }, [users, selectedUserId])
-
   useEffect(() => {
     if (!selectedChatId && chats.length) chooseChatId(chats[0].id)
   }, [chats, selectedChatId])
-
   useEffect(() => {
     if (selectedChatId) loadMessages(selectedChatId).catch(err => toast.error(err.message))
   }, [selectedChatId, loadMessages])
-
   const createUser = useCallback(async () => {
     if (!name.trim()) return
     const u = await api<User>('/api/users', { method: 'POST', body: JSON.stringify({ name: name.trim() }) })
@@ -61,7 +53,6 @@ export function DemoPage() {
     toast.success('User created')
     if (!selectedUserId) chooseUserId(u.id)
   }, [name, selectedUserId])
-
   const createChat = useCallback(async () => {
     if (!title.trim()) return
     const c = await api<Chat>('/api/chats', { method: 'POST', body: JSON.stringify({ title: title.trim() }) })
@@ -70,32 +61,32 @@ export function DemoPage() {
     toast.success('Chat created')
     if (!selectedChatId) chooseChatId(c.id)
   }, [title, selectedChatId])
-
   const send = useCallback(async () => {
     if (!selectedUserId || !selectedChatId || !text.trim()) return
     const m = await api<ChatMessage>(`/api/chats/${selectedChatId}/messages`, { method: 'POST', body: JSON.stringify({ userId: selectedUserId, text: text.trim() }) })
     updateMessages(prev => [...prev, m])
     updateText('')
   }, [selectedUserId, selectedChatId, text])
-
   return (
     <AppLayout>
     <main className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4 overflow-hidden relative">
       <ThemeToggle />
-
-      <div className="absolute inset-0 bg-gradient-rainbow opacity-10 dark:opacity-20" />
-      
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-background to-orange-500/10 -z-10" />
       <div className="space-y-6 relative z-10 max-w-3xl w-full">
         <div className="flex justify-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-primary floating">
-            <Sparkles className="w-8 h-8 text-white rotating" />
+          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-primary floating">
+            <Sparkles className="w-8 h-8 text-primary-foreground rotating" />
           </div>
         </div>
-
         <h1 className="text-4xl md:text-5xl font-display font-bold text-center">
-          Minimal Users + Chats Demo
+          Template Demo Page
         </h1>
-
+        <p className="text-center text-muted-foreground">This is the original template demo page. The main application is VoltIQ.</p>
+        <div className="flex justify-center">
+            <Button asChild>
+                <Link to="/">Go to VoltIQ Home <ArrowRight className="ml-2 h-4 w-4" /></Link>
+            </Button>
+        </div>
         {/* Quick create controls */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="flex gap-2">
@@ -107,7 +98,6 @@ export function DemoPage() {
             <Button onClick={createChat}>Add Chat</Button>
           </div>
         </div>
-
         {/* Pick user and chat */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="flex items-center gap-2">
@@ -129,7 +119,6 @@ export function DemoPage() {
             </select>
           </div>
         </div>
-
         {/* Messages */}
         <div className="border rounded p-3 h-64 overflow-y-auto bg-muted/30">
           {selectedChatId ? (
@@ -147,18 +136,15 @@ export function DemoPage() {
             <div className="text-sm text-muted-foreground">Select a chat to view messages.</div>
           )}
         </div>
-
         {/* Compose */}
         <div className="flex gap-2">
           <Textarea placeholder="Type a message" value={text} onChange={(e) => updateText(e.target.value)} disabled={!selectedUserId || !selectedChatId} />
           <Button onClick={() => send().catch(err => toast.error(err.message))} disabled={!selectedUserId || !selectedChatId || !text.trim()}>Send</Button>
         </div>
       </div>
-
       <footer className="mt-8 text-center text-muted-foreground/80">
         <p>Powered by Cloudflare</p>
       </footer>
-
       <Toaster richColors closeButton />
     </main>
     </AppLayout>
